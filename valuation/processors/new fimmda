@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import { PrismaClient } from '@prisma/client';
 import { ProcessingResult, FIMMDA_COLUMN_MAPPING } from '../valuationTypes';
 import { BaseFileProcessor } from './BaseFileProcessor';
+import { mapRowToRecord, normalizeHeader, RowMappingError } from './common/RowMappingUtils';
 
 export class FIMMDAProcessor extends BaseFileProcessor {
   constructor(prisma: PrismaClient) {
@@ -18,6 +19,7 @@ export class FIMMDAProcessor extends BaseFileProcessor {
 
       const sheetsToProcess = ['details'];
       let allRecords: any[] = [];
+      let errors: RowMappingError[] = [];
 
       for (const sheetNameKey of sheetsToProcess) {
         const sheetName = Object.keys(workbook.Sheets).find(
@@ -43,24 +45,32 @@ export class FIMMDAProcessor extends BaseFileProcessor {
         }
 
         const headers = (jsonData[headerRowIndex] as string[]).map(h =>
-          h ? this.normalizeHeader(h.toString()) : ''
+          h ? normalizeHeader(h.toString()) : ''
         );
 
         for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
           const row = jsonData[i] as any[];
           if (!row || row.length === 0) continue;
 
-          const record = this.mapRowToRecord(headers, row);
+          const record = mapRowToRecord(
+            headers,
+            row,
+            i,
+            FIMMDA_COLUMN_MAPPING,
+            ['isin', 'marketPrice', 'category'],
+            errors
+          );
+
           if (record) {
             allRecords.push(record);
           }
         }
       }
 
-      // Step 2: Clear old data for the batch
+      // Clear old data
       await this.prisma.fIMMDA.deleteMany({});
 
-      // Step 3: Process and insert records
+      // Insert into DB
       let processedRecords = 0;
       let errorRecords = 0;
 
@@ -69,8 +79,8 @@ export class FIMMDAProcessor extends BaseFileProcessor {
           const processedRecord = this.processRecord(record, batchId);
           await this.prisma.fIMMDA.create({ data: processedRecord });
           processedRecords++;
-        } catch (error) {
-          console.error('Error processing FIMMDA record:', error);
+        } catch (err) {
+          console.error('DB Error:', err);
           errorRecords++;
         }
       }
@@ -78,22 +88,13 @@ export class FIMMDAProcessor extends BaseFileProcessor {
       return {
         totalRecords: allRecords.length,
         processedRecords,
-        errorRecords
+        errorRecords,
+        errors,
       };
-
     } catch (error) {
-      console.error('Error processing FIMMDA file:', error);
+      console.error('FIMMDA file error:', error);
       throw error;
     }
-  }
-
-  private normalizeHeader(header: string): string {
-    return header
-      .toLowerCase()
-      .replace(/[\r\n\t]/g, ' ')             // Replace line breaks and tabs
-      .replace(/[^a-z0-9\s]/gi, '')          // Remove special characters
-      .replace(/\s+/g, ' ')                  // Collapse multiple spaces
-      .trim();
   }
 
   private findHeaderRow(data: any[]): number {
@@ -102,7 +103,7 @@ export class FIMMDAProcessor extends BaseFileProcessor {
       if (!row || !Array.isArray(row)) continue;
 
       const lowerRow = row.map(cell =>
-        cell ? this.normalizeHeader(cell.toString()) : ''
+        cell ? normalizeHeader(cell.toString()) : ''
       );
 
       const hasISIN = lowerRow.some(h => h.includes('isin'));
@@ -116,24 +117,6 @@ export class FIMMDAProcessor extends BaseFileProcessor {
       }
     }
     return -1;
-  }
-
-  private mapRowToRecord(headers: string[], row: any[]): any {
-    const record: any = {};
-    headers.forEach((header, index) => {
-      const normalizedHeader = this.normalizeHeader(header);
-      const dbColumn = FIMMDA_COLUMN_MAPPING[normalizedHeader];
-      if (dbColumn && row[index] !== undefined) {
-        const value = this.processValue(dbColumn, row[index]);
-        record[dbColumn] = value;
-      }
-    });
-
-    if (!record.isin || !record.marketPrice || !record.category) {
-      return null;
-    }
-
-    return record;
   }
 
   private processRecord(record: any, batchId: string): any {
