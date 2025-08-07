@@ -9,12 +9,16 @@ export interface RowMappingError {
 export function normalizeHeader(header: string): string {
   return header
     .toLowerCase()
-    .replace(/[\r\n\t]/g, ' ')       // Replace line breaks, tabs
-    .replace(/[^a-z0-9\s]/gi, '')    // Remove special characters
-    .replace(/\s+/g, ' ')            // Collapse multiple spaces
+    .replace(/[\r\n\t]/g, ' ')
+    .replace(/[^a-z0-9\s]/gi, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
+/**
+ * Maps a row to a record based on the given headers and column mapping.
+ * Only validates headers that are present in FIMMDA_COLUMN_MAPPING.
+ */
 export function mapRowToRecord(
   headers: string[],
   row: any[],
@@ -29,23 +33,27 @@ export function mapRowToRecord(
     const normalizedHeader = normalizeHeader(header);
     const dbColumn = columnMapping[normalizedHeader];
 
-    if (!dbColumn) {
+    // If header is not in mapping, skip silently (no error)
+    if (!dbColumn) return;
+
+    const cellValue = row[index];
+    if (cellValue === undefined || cellValue === null || cellValue === '') {
       errors.push({
         row: rowIndex + 1,
         column: index + 1,
-        message: `Unmapped header "${header}" at column ${index + 1}`
+        message: `Missing value for required field "${normalizedHeader}"`
       });
-      return;
     }
 
-    record[dbColumn] = row[index];
+    record[dbColumn] = cellValue;
   });
 
-  const isMissingRequired = requiredFields.some(field => !record[field]);
-  if (isMissingRequired) {
+  // Check required fields from the mapping
+  const missingRequired = requiredFields.filter(f => !record[f] && record[f] !== 0);
+  if (missingRequired.length > 0) {
     errors.push({
       row: rowIndex + 1,
-      message: `Missing required fields: ${requiredFields.filter(f => !record[f]).join(', ')}`
+      message: `Missing required fields: ${missingRequired.join(', ')}`
     });
     return null;
   }
