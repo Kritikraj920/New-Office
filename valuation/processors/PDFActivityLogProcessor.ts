@@ -238,3 +238,9 @@ export class PDFActivityLogProcessor {
 npm install tesseract.js pdf2pic
 
 
+OCR Processing Error: Error: write EOF
+    at WriteWrap.onWriteComplete [as oncomplete] (node:internal/stream_base_commons:87:19) {
+  errno: -4095,
+  code: 'EOF',
+  syscall: 'write'
+}
