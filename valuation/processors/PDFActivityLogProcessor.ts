@@ -154,3 +154,87 @@ Error processing Valutaion files: Error: No text layer found in PDF (might be sc
     at C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\lib\pdf.js:187:31
     at processTicksAndRejections (node:internal/process/task_queues:85:11)
 
+import { PrismaClient } from "@prisma/client";
+import Tesseract from "tesseract.js";
+import { fromBuffer } from "pdf2pic";
+import { ProcessingResult } from "../valuationTypes";
+
+export class PDFActivityLogProcessor {
+  private prisma: PrismaClient;
+  
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma;
+  }
+
+  async processFile(file: Express.Multer.File, batchId: string): Promise<ProcessingResult> {
+    try {
+      const ocrText = await this.extractTextFromScannedPDF(file.buffer);
+
+      const records: { transactionNo: string; matchedTime: string }[] = [];
+      const regex = /(\d{15})[\s\S]{0,50}Matched[\s\S]{0,50}(\d{2}:\d{2}:\d{2})/g;
+
+      let match;
+      while ((match = regex.exec(ocrText)) !== null) {
+        records.push({
+          transactionNo: match[1],
+          matchedTime: match[2],
+        });
+      }
+
+      // Store in DB
+      await this.prisma.activityLog.deleteMany({ where: { uploadBatchId: batchId } });
+      let processedRecords = 0;
+      let errorRecords = 0;
+
+      for (const rec of records) {
+        try {
+          await this.prisma.activityLog.create({
+            data: {
+              transactionNo: rec.transactionNo,
+              matchedTime: rec.matchedTime,
+              uploadBatchId: batchId,
+            },
+          });
+          processedRecords++;
+        } catch (err) {
+          errorRecords++;
+          console.error("Insert error:", err);
+        }
+      }
+
+      return {
+        totalRecords: records.length,
+        processedRecords,
+        errorRecords,
+      };
+    } catch (err) {
+      console.error("OCR Processing Error:", err);
+      throw err;
+    }
+  }
+
+  private async extractTextFromScannedPDF(buffer: Buffer): Promise<string> {
+    const pdf2picConverter = fromBuffer(buffer, {
+      density: 300,
+      format: "png",
+      width: 2480,
+      height: 3508,
+    });
+
+    let allText = "";
+
+    const totalPages = 6; // you can make this dynamic if needed
+    for (let page = 1; page <= totalPages; page++) {
+      const image = await pdf2picConverter(page);
+      const result = await Tesseract.recognize(image.path, "eng", {
+        logger: (m) => console.log(m.status, m.progress),
+      });
+      allText += result.data.text + "\n";
+    }
+
+    return allText;
+  }
+}
+npm install tesseract.js pdf2pic
+
+
