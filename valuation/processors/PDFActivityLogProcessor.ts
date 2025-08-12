@@ -244,3 +244,15 @@ OCR Processing Error: Error: write EOF
   code: 'EOF',
   syscall: 'write'
 }
+loading tesseract core 0
+loading tesseract core 1
+initializing tesseract 0
+initializing tesseract 1
+loading language traineddata 0
+Error: TypeError: fetch failed
+    at Worker.<anonymous> (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\tesseract.js\src\createWorker.js:217:15)
+    at Worker.emit (node:events:518:28)
+    at MessagePort.<anonymous> (node:internal/worker:268:53)
+    at MessagePort.[nodejs.internal.kHybridDispatch] (node:internal/event_target:827:20)
+    at MessagePort.<anonymous> (node:internal/per_context/messageport:23:28)
+[ERROR] 23:57:32 Error: TypeError: fetch failed
