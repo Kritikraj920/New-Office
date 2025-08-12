@@ -129,3 +129,28 @@ private parsePDF(buffer: Buffer): Promise<{ transactionNo: string; matchedTime: 
     pdfParser.parseBuffer(buffer);
   });
 }
+Error processing PDF file: Error: No text layer found in PDF (might be scanned or image-based PDF).
+    at gi.<anonymous> (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\src\services\breakCheck\processors\PDFActivityLogProcessor.ts:58:23)
+    at gi.emit (node:events:518:28)
+    at gi.onPDFJSParseDataReady (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\pdfparser.js:118:9)
+    at hi.<anonymous> (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\pdfparser.js:140:9)
+    at hi.emit (node:events:518:28)
+    at C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\lib\pdf.js:187:31
+    at processTicksAndRejections (node:internal/process/task_queues:85:11)
+Error processing Valutaion files: Error: No text layer found in PDF (might be scanned or image-based PDF).
+    at gi.<anonymous> (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\src\services\breakCheck\processors\PDFActivityLogProcessor.ts:58:23)
+    at gi.emit (node:events:518:28)
+    at gi.onPDFJSParseDataReady (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\pdfparser.js:118:9)
+    at hi.<anonymous> (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\pdfparser.js:140:9)
+    at hi.emit (node:events:518:28)
+    at C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\lib\pdf.js:187:31
+    at processTicksAndRejections (node:internal/process/task_queues:85:11)
+15 Min Breack Check processing error: Error: No text layer found in PDF (might be scanned or image-based PDF).
+    at gi.<anonymous> (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\src\services\breakCheck\processors\PDFActivityLogProcessor.ts:58:23)
+    at gi.emit (node:events:518:28)
+    at gi.onPDFJSParseDataReady (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\pdfparser.js:118:9)
+    at hi.<anonymous> (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\pdfparser.js:140:9)
+    at hi.emit (node:events:518:28)
+    at C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\lib\pdf.js:187:31
+    at processTicksAndRejections (node:internal/process/task_queues:85:11)
+
