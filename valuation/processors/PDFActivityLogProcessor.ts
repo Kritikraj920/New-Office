@@ -92,3 +92,40 @@ TypeError: Cannot read properties of undefined (reading 'Pages')
     at processTicksAndRejections (node:internal/process/task_queues:85:11)
 [ERROR] 23:27:18 TypeError: Cannot read properties of undefined (reading 'Pages')
 
+private parsePDF(buffer: Buffer): Promise<{ transactionNo: string; matchedTime: string }[]> {
+  return new Promise((resolve, reject) => {
+    const pdfParser = new PDFParser();
+
+    pdfParser.on("pdfParser_dataError", (errData) => reject(errData.parserError));
+    pdfParser.on("pdfParser_dataReady", (pdfData) => {
+      if (!pdfData?.formImage?.Pages) {
+        return reject(new Error("No text layer found in PDF (might be scanned or image-based PDF)."));
+      }
+
+      let rawText = "";
+      pdfData.formImage.Pages.forEach((page) => {
+        page.Texts.forEach((textObj) => {
+          rawText += decodeURIComponent(textObj.R[0].T) + " ";
+        });
+        rawText += "\n";
+      });
+
+      const results: { transactionNo: string; matchedTime: string }[] = [];
+
+      // This regex matches the transaction no followed later by matched time
+      const transactionRegex = /(\d{15})[\s\S]*?Matched\s+Matched\s+(\d{15})\s+(\d{2}:\d{2}:\d{2})/g;
+
+      let match;
+      while ((match = transactionRegex.exec(rawText)) !== null) {
+        results.push({
+          transactionNo: match[2],
+          matchedTime: match[3],
+        });
+      }
+
+      resolve(results);
+    });
+
+    pdfParser.parseBuffer(buffer);
+  });
+}
