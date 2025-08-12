@@ -82,3 +82,13 @@ export class PDFActivityLogProcessor {
     });
   }
 }
+TypeError: Cannot read properties of undefined (reading 'Pages')
+    at gi.<anonymous> (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\src\services\breakCheck\processors\PDFActivityLogProcessor.ts:57:43)
+    at gi.emit (node:events:518:28)
+    at gi.onPDFJSParseDataReady (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\pdfparser.js:118:9)
+    at hi.<anonymous> (C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\pdfparser.js:140:9)
+    at hi.emit (node:events:518:28)
+    at C:\Users\Kritik.Raj\OneDrive - Grant Thornton Advisory Private Limited\Desktop\AG_GT\ag-gt-app\backend\node_modules\pdf2json\lib\pdf.js:187:31
+    at processTicksAndRejections (node:internal/process/task_queues:85:11)
+[ERROR] 23:27:18 TypeError: Cannot read properties of undefined (reading 'Pages')
+
