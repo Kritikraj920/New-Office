@@ -1,45 +1,47 @@
-interface TempDeal {
-  dealId: string; // e.g. 202506300005241
-  dealTime: string; // from Placed
-  matchedTime: string; // from Placed
-}
-
 private extractShortSaleRecords(pdfData: { Pages: { Texts: any[] }[] }): Partial<ShortSaleRecord>[] {
-  const textChunks = pdfData.Pages.flatMap(p => p.Texts.map(t => decodeURIComponent(t.R[0].T)));
-
-  const dealIdToTimes: Record<string, TempDeal> = {};
   const records: Partial<ShortSaleRecord>[] = [];
+  const dealMap: Record<string, { dealTime: string; matchedTime: string }> = {};
+
+  const textChunks: string[] = [];
+
+  pdfData.Pages.forEach((page) => {
+    page.Texts.forEach((textObj) => {
+      textObj.R.forEach((run: { T: string }) => {
+        const decodedText = decodeURIComponent(run.T);
+        textChunks.push(decodedText);
+      });
+    });
+  });
 
   for (let i = 0; i < textChunks.length; i++) {
     const line = textChunks[i];
 
-    // Step 1: Capture Placed Pending lines
+    // Step 1: Extract from Placed Pending block
     if (line.includes("Placed Pending")) {
       const prevLine = textChunks[i - 1];
-      const dealId = prevLine.match(/^(\d{15})/)?.[1]; // e.g. 202506300005241
-      const dealTime = prevLine.match(/T\+1 (\d{2}:\d{2})/)?.[1];
+      const dealId = prevLine.match(/^(\d{15})/)?.[1];
+      const dealTime = prevLine.match(/T\+1\s(\d{2}:\d{2})/)?.[1];
       const matchedTime = line.match(/(\d{2}:\d{2}:\d{2})/)?.[1];
 
       if (dealId && dealTime && matchedTime) {
-        dealIdToTimes[dealId] = { dealId, dealTime, matchedTime };
+        dealMap[dealId] = { dealTime, matchedTime };
       }
     }
 
-    // Step 2: Capture Matched Matched lines
+    // Step 2: Extract final Transaction No from Matched Matched block
     if (line.includes("Matched Matched")) {
-      const prevLine = textChunks[i - 1]; // e.g. "202506300005241 - TM-TM PNBG..."
-      const matchedLine = textChunks[i + 1]; // e.g. "202506300002270 15:32:47"
+      const prevLine = textChunks[i - 1]; // Line with dealId
+      const nextLine = textChunks[i + 1]; // Line with transactionNo
+      const dealId = prevLine.match(/^(\d{15})/)?.[1];
+      const transactionNo = nextLine.match(/^(\d{15})/)?.[1];
 
-      const dealId = prevLine.match(/^(\d{15})/)?.[1]; // same deal ID
-      const transactionNo = matchedLine.match(/^(\d{15})/)?.[1]; // final transactionNo
-
-      if (dealId && transactionNo && dealIdToTimes[dealId]) {
-        const times = dealIdToTimes[dealId];
+      if (dealId && transactionNo && dealMap[dealId]) {
+        const { dealTime, matchedTime } = dealMap[dealId];
 
         records.push({
           transactionNo,
-          dealTime: times.dealTime,
-          matchedTime: times.matchedTime,
+          DealTime: dealTime,
+          MatchedTime: matchedTime
         });
       }
     }
