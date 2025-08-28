@@ -1,0 +1,49 @@
+interface TempDeal {
+  dealId: string; // e.g. 202506300005241
+  dealTime: string; // from Placed
+  matchedTime: string; // from Placed
+}
+
+private extractShortSaleRecords(pdfData: { Pages: { Texts: any[] }[] }): Partial<ShortSaleRecord>[] {
+  const textChunks = pdfData.Pages.flatMap(p => p.Texts.map(t => decodeURIComponent(t.R[0].T)));
+
+  const dealIdToTimes: Record<string, TempDeal> = {};
+  const records: Partial<ShortSaleRecord>[] = [];
+
+  for (let i = 0; i < textChunks.length; i++) {
+    const line = textChunks[i];
+
+    // Step 1: Capture Placed Pending lines
+    if (line.includes("Placed Pending")) {
+      const prevLine = textChunks[i - 1];
+      const dealId = prevLine.match(/^(\d{15})/)?.[1]; // e.g. 202506300005241
+      const dealTime = prevLine.match(/T\+1 (\d{2}:\d{2})/)?.[1];
+      const matchedTime = line.match(/(\d{2}:\d{2}:\d{2})/)?.[1];
+
+      if (dealId && dealTime && matchedTime) {
+        dealIdToTimes[dealId] = { dealId, dealTime, matchedTime };
+      }
+    }
+
+    // Step 2: Capture Matched Matched lines
+    if (line.includes("Matched Matched")) {
+      const prevLine = textChunks[i - 1]; // e.g. "202506300005241 - TM-TM PNBG..."
+      const matchedLine = textChunks[i + 1]; // e.g. "202506300002270 15:32:47"
+
+      const dealId = prevLine.match(/^(\d{15})/)?.[1]; // same deal ID
+      const transactionNo = matchedLine.match(/^(\d{15})/)?.[1]; // final transactionNo
+
+      if (dealId && transactionNo && dealIdToTimes[dealId]) {
+        const times = dealIdToTimes[dealId];
+
+        records.push({
+          transactionNo,
+          dealTime: times.dealTime,
+          matchedTime: times.matchedTime,
+        });
+      }
+    }
+  }
+
+  return records;
+}
