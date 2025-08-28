@@ -43,3 +43,53 @@ private extractMatchedTransactions(pdfData: { Pages: { Texts: any[] }[] }): { tr
 }
 const regex = /(\d{15}) - TM-TM .*?(?:Bid|Offer) T\+1 (\d{2}:\d{2}) .*?Placed Pending\s*-\s*(\d{2}:\d{2}:\d{2})[\s\S]*?Matched Matched\s+(2025\d{11})/g;
 
+===================================
+private extractMatchedTransactions(pdfData: { Pages: { Texts: any[] }[] }): { transactionNo: string; matchedTime: string; dealTime: string }[] {
+  const matchedRecords: { transactionNo: string; matchedTime: string; dealTime: string }[] = [];
+
+  pdfData.Pages.forEach((page) => {
+    const textChunks: string[] = [];
+
+    page.Texts.forEach((textObj) => {
+      textObj.R.forEach((run: { T: string }) => {
+        const decodedText = decodeURIComponent(run.T);
+        textChunks.push(decodedText);
+      });
+    });
+
+    const fullText = textChunks.join(" ");
+    console.log("Full Text is", fullText);
+
+    // 1. Extract Placed Pending records into a map keyed by transactionNo
+    const placedPendingRegex = /(\d{15}) - TM-TM .*?(?:Bid|Offer) T\+1 (\d{2}:\d{2}) .*?Placed Pending\s*-\s*(\d{2}:\d{2}:\d{2})/g;
+    const placedPendingMap = new Map<string, { dealTime: string; pendingTime: string }>();
+
+    let match;
+    while ((match = placedPendingRegex.exec(fullText)) !== null) {
+      const transactionNo = match[1];
+      const dealTime = match[2];
+      const pendingTime = match[3];
+      placedPendingMap.set(transactionNo, { dealTime, pendingTime });
+    }
+
+    // 2. Extract Matched Matched records
+    const matchedMatchedRegex = /Matched Matched\s+(2025\d{11})\s+(\d{2}:\d{2}:\d{2})/g;
+
+    while ((match = matchedMatchedRegex.exec(fullText)) !== null) {
+      const transactionNo = match[1];
+      const matchedTime = match[2];
+
+      const placed = placedPendingMap.get(transactionNo);
+      if (placed) {
+        matchedRecords.push({
+          transactionNo,
+          dealTime: placed.dealTime,
+          matchedTime,
+        });
+      }
+    }
+  });
+
+  console.log("Matched Records is", matchedRecords);
+  return matchedRecords;
+}
