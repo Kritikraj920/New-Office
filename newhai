@@ -93,3 +93,55 @@ private extractMatchedTransactions(pdfData: { Pages: { Texts: any[] }[] }): { tr
   console.log("Matched Records is", matchedRecords);
   return matchedRecords;
 }
+======================================================
+private extractMatchedTransactions(pdfData: { Pages: { Texts: any[] }[] }): { transactionNo: string; matchedTime: string; dealTime: string }[] {
+  const matchedRecords: { transactionNo: string; matchedTime: string; dealTime: string }[] = [];
+
+  pdfData.Pages.forEach((page) => {
+    const textChunks: string[] = [];
+
+    page.Texts.forEach((textObj) => {
+      textObj.R.forEach((run: { T: string }) => {
+        const decodedText = decodeURIComponent(run.T);
+        textChunks.push(decodedText);
+      });
+    });
+
+    const fullText = textChunks.join(" ");
+    console.log("Full Text is", fullText);
+
+    // Extract all placed pending blocks (dealTime and pendingTime)
+    const placedPendingRegex = /(\d{15}) - TM-TM .*?(?:Bid|Offer) T\+1 (\d{2}:\d{2}) .*?Placed Pending\s*-\s*(\d{2}:\d{2}:\d{2})/g;
+    const placedPendings: { dealTime: string; pendingTime: string }[] = [];
+
+    let match;
+    while ((match = placedPendingRegex.exec(fullText)) !== null) {
+      const dealTime = match[2];
+      const pendingTime = match[3];
+      placedPendings.push({ dealTime, pendingTime });
+    }
+
+    // Extract all matched matched blocks (transactionNo and matchedTime)
+    const matchedMatchedRegex = /Matched Matched\s+(2025\d{11})\s+(\d{2}:\d{2}:\d{2})/g;
+    const matchedBlocks: { transactionNo: string; matchedTime: string }[] = [];
+
+    while ((match = matchedMatchedRegex.exec(fullText)) !== null) {
+      const transactionNo = match[1];
+      const matchedTime = match[2];
+      matchedBlocks.push({ transactionNo, matchedTime });
+    }
+
+    // Now pair placedPending and matched in order (assuming same count and order)
+    const len = Math.min(placedPendings.length, matchedBlocks.length);
+    for (let i = 0; i < len; i++) {
+      matchedRecords.push({
+        transactionNo: matchedBlocks[i].transactionNo,
+        matchedTime: placedPendings[i].pendingTime,
+        dealTime: placedPendings[i].dealTime,
+      });
+    }
+  });
+
+  console.log("Matched Records is", matchedRecords);
+  return matchedRecords;
+}
